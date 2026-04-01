@@ -61,6 +61,45 @@
         #gameOver button:hover {
             background: #45a049;
         }
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 30;
+        }
+        #instructions h1 {
+            font-size: 42px;
+            margin-bottom: 30px;
+            color: #ffff00;
+        }
+        #instructions p {
+            font-size: 20px;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+        #instructions button {
+            font-size: 28px;
+            padding: 15px 50px;
+            margin-top: 30px;
+            border: none;
+            border-radius: 10px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #instructions button:hover {
+            background: #45a049;
+        }
+        .emoji {
+            font-size: 30px;
+        }
     </style>
 </head>
 <body>
@@ -68,6 +107,15 @@
     <div id="ui">
         <div>Score: <span id="score">0</span></div>
         <div>Coins: <span id="coins">0</span></div>
+    </div>
+    <div id="instructions">
+        <h1>🏃 Subway Surfers 3D 🚌</h1>
+        <p><span class="emoji">⬅️➡️</span> Swipe Left/Right to change lanes</p>
+        <p><span class="emoji">⬆️</span> Swipe Up to Jump</p>
+        <p><span class="emoji">⬇️</span> Swipe Down to Roll/Slide</p>
+        <p style="margin-top: 25px; font-size: 18px;">🪙 Collect coins to increase speed!</p>
+        <p style="font-size: 18px;">🚌 Avoid vehicles: Bus, Auto, Bike, Cycle, Van</p>
+        <button onclick="startGame()">Start Game</button>
     </div>
     <div id="gameOver">
         <h1>Game Over!</h1>
@@ -90,6 +138,13 @@
         let isJumping = false;
         let jumpVelocity = 0;
         let isRolling = false;
+        let gameStarted = false;
+
+        // Touch controls
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
 
         // Sound effects
         function playCoinSound() {
@@ -185,8 +240,15 @@
 
             // Input handling
             document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('touchstart', handleTouchStart, false);
+            document.addEventListener('touchend', handleTouchEnd, false);
             
             animate();
+        }
+
+        function startGame() {
+            gameStarted = true;
+            document.getElementById('instructions').style.display = 'none';
         }
 
         function createPlayer() {
@@ -527,7 +589,7 @@
         }
 
         function handleKeyDown(event) {
-            if (isGameOver) return;
+            if (isGameOver || !gameStarted) return;
 
             switch(event.key) {
                 case 'ArrowLeft':
@@ -553,6 +615,60 @@
                         setTimeout(() => { isRolling = false; }, 500);
                     }
                     break;
+            }
+        }
+
+        function handleTouchStart(event) {
+            touchStartX = event.changedTouches[0].screenX;
+            touchStartY = event.changedTouches[0].screenY;
+        }
+
+        function handleTouchEnd(event) {
+            if (isGameOver || !gameStarted) return;
+
+            touchEndX = event.changedTouches[0].screenX;
+            touchEndY = event.changedTouches[0].screenY;
+            handleSwipe();
+        }
+
+        function handleSwipe() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const minSwipeDistance = 30;
+
+            // Determine if horizontal or vertical swipe
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Horizontal swipe
+                if (Math.abs(deltaX) > minSwipeDistance) {
+                    if (deltaX > 0) {
+                        // Swipe right
+                        if (currentLane < 2) {
+                            currentLane++;
+                        }
+                    } else {
+                        // Swipe left
+                        if (currentLane > 0) {
+                            currentLane--;
+                        }
+                    }
+                }
+            } else {
+                // Vertical swipe
+                if (Math.abs(deltaY) > minSwipeDistance) {
+                    if (deltaY < 0) {
+                        // Swipe up - Jump
+                        if (!isJumping && !isRolling) {
+                            isJumping = true;
+                            jumpVelocity = 0.3;
+                        }
+                    } else {
+                        // Swipe down - Roll
+                        if (!isJumping && !isRolling) {
+                            isRolling = true;
+                            setTimeout(() => { isRolling = false; }, 500);
+                        }
+                    }
+                }
             }
         }
 
@@ -599,7 +715,7 @@
         }
 
         function updateGame() {
-            if (isGameOver) return;
+            if (isGameOver || !gameStarted) return;
 
             // Move ground
             ground.forEach((piece, index) => {
@@ -713,6 +829,7 @@
             coinCount = 0;
             gameSpeed = 0.2;
             isGameOver = false;
+            gameStarted = true;
             currentLane = 1;
             isJumping = false;
             jumpVelocity = 0;
